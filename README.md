@@ -1,14 +1,10 @@
-# 🚕 Taxi Trip Streaming Pipeline — AWS Architecture
+# 🚕 Taxi Trip Streaming Pipeline
 
-This project provides a **fault-tolerant, real-time streaming pipeline** for taxi trip events. Built on AWS, it processes start-trip and end-trip events through **Kinesis** and **Lambda**, stores trip state in **DynamoDB**, and enables error handling and relay recovery through **SNS**, **SQS**, and **AWS Glue**.
-
-
-This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events.  
-Built on **AWS**, it:
+This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events. Build on **AWS**, it:
 
 - Processes start‑trip and end‑trip events using **Kinesis** and **Lambda**
-- Persists trip state in **DynamoDB**
-- Ensures error handling and recovery through **SNS**, **SQS**, and **AWS Glue**
+- Stores trip state in **DynamoDB**
+- Enables error handling and recovery through **SNS**, **SQS**, and **AWS Glue**
 
 ---
 
