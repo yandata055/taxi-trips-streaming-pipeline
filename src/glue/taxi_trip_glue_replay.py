@@ -6,7 +6,7 @@ import logging
 import sys
 from datetime import datetime
 from decimal import Decimal
-# from awsglue.utils import getResolvedOptions
+from awsglue.utils import getResolvedOptions
 
 # ---------- Helpers ----------
 def parse_decimal_json(payload: bytes) -> dict:
@@ -78,16 +78,16 @@ def replay_failed_trips(sqs_url, table):
                 logger.error(f"Glue replay error: {e} | {datetime.utcnow().isoformat()}")
 
 if __name__ == "__main__":
+
     # ---------- Configuration and logging----------
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     sqs = boto3.client('sqs')
     
-    # args = getResolvedOptions(sys.argv, ['sqs_url', 'source_table'])
-    # sql_url = args['sqs_url']
-    # table = args['source_table']
-    table = "taxi_trip_details"
-    sqs_url = "https://sqs.us-east-1.amazonaws.com/596220994208/failed-updated-trips"
+    args = getResolvedOptions(sys.argv, ['sqs_url', 'source_table'])
+    sql_url = args['sqs_url']
+    table = args['source_table']
+
     replay_failed_trips(sqs_url, table)
 
 

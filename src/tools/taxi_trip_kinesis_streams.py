@@ -104,15 +104,6 @@ def send_batch_to_kinesis(kinesis_client, batch: List[Dict], stream_name: str) -
 # Main Logic
 # ─────────────────────────────────────────────────────────────
 def main():
-    # parser = argparse.ArgumentParser(description="Simulate taxi trip events into Kinesis from Parquet input.")
-    # parser.add_argument("--region", default="us-east-1")
-    # parser.add_argument("--start_parquet", default="data/taxi_trip_start.parquet")
-    # parser.add_argument("--end_parquet", default="data/taxi_trip_end.parquet")
-    # parser.add_argument("--start_stream", default="trips_start")
-    # parser.add_argument("--end_stream", default="trips_end")
-    # parser.add_argument("--batch_size", type=int, default=30)
-    # parser.add_argument("--pause_between", type=float, default=2.0)
-    # args = parser.parse_args()
 
     logger.info("Loading trip start parquet")
     start_df = pd.read_parquet("data/start_taxi_trips.parquet")
@@ -146,18 +137,15 @@ def main():
 
         logger.info(f"Sending end trip batch...")
         end_batch = end_records[idx_batch:idx_batch + MAX_RECORDS_PER_BATCH]
-        print(len(end_batch))
+
         sent_end_trip_count = send_batch_to_kinesis(kinesis_client, end_batch, kinesis_end_trip_stream)
         logger.info(f"Sent {sent_end_trip_count} end strips in this batch.| {datetime.utcnow().isoformat()}")
 
         idx_batch += MAX_RECORDS_PER_BATCH
-        print(idx_batch)
 
         logger.info("Completed batch cycle. Waiting before next batch...")
         time.sleep(3)
 
-        if count_batch == 1:
-            break
 
     logger.info("Kinesis event simulation completed.")
 
