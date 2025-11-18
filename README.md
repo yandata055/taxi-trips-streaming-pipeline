@@ -1,115 +1,248 @@
-# Real-Time Taxi Trips Streaming Pipeline (AWS Data Engineering Project)
+🚕 Taxi Trip Streaming Pipeline — Real-Time AWS Architecture
 
-**Tech:** AWS Kinesis · Lambda · DynamoDB · Glue · S3 · SNS · SQS · CloudFormation · Python 3.10 · Pandas
+This project implements a fault-tolerant, real-time taxi-trip event processing pipeline using AWS services.
+It reliably processes start-trip and end-trip events, maintains trip state in DynamoDB, and ensures guaranteed replay of failed updates using SQS + AWS Glue.
 
-This project builds a **real-time streaming pipeline** around San Francisco’s official **Taxi Trips** open dataset. It ingests trip events, validates them, updates a DynamoDB table in near real time, and replays failures via an AWS Glue job.
+This repository includes:
 
-I use this repository as a **portfolio project for data engineering interviews**.  
-It’s designed so that a hiring manager can quickly understand:
+AWS CloudFormation template (infrastructure as code)
 
-- **What problem I solved**
-- **Which AWS services and data engineering skills I used**
-- **How I think about reliability, data quality, and scalability**
+AWS Glue replay job (Python)
 
----
+Architecture & sequence diagrams
 
-## 1. Problem & Dataset
+End-to-end workflow documentation
 
-San Francisco publishes detailed records of taxi trips, including pickup location, dropoff, and fare information, through the DataSF portal. 
+📚 Table of Contents
 
-The goal of this project is to **treat these trip events as a real-time stream**, and:
+Overview
 
-- Ingest start and end events for taxi trips
-- Perform basic validation and enrichment
-- Persist a **single source of truth** for trip details
-- Route invalid or failed events to **alerting and replay** mechanisms
+High-Level Architecture
 
-Use cases for this kind of pipeline include:
+Components
 
-- Monitoring taxi activity across the city
-- Analyzing the impact of pricing pilots on driver income
-- Powering dashboards that show trip counts, average fares, and trip distances in near real time :contentReference[oaicite:1]{index=1}  
+Sequence Diagrams
 
----
+Start-Trip Event Flow
 
-## 2. High-Level Architecture
+End-Trip Event Flow
 
-At a glance:
+Glue Replay Recovery Flow
 
-- **Data source** – SF Taxi Trips open data (streamed as events)
-- **Ingestion** – Python producer that sends events to **two Kinesis streams** (start vs end trips)
-- **Processing** – Two **AWS Lambda** functions that validate and write to **DynamoDB**
-- **Reliability** – Invalid records go to **SNS**, failed writes go to **SQS**
-- **Replay** – An **AWS Glue** job reads from SQS and retries failed updates
-- **Infrastructure-as-Code** – Everything provisioned via **CloudFormation**
+Glue Replay Job
 
-The `infra/TaxiTripResourcesAWS-template.yaml` template provisions:
+Data Flow Summary
 
-- S3 bucket for project data
-- Two Kinesis streams (`start-trip-stream`, `end-trip-stream`)
-- Two Lambda functions (`start-taxi-trips`, `end-taxi-trips`)
-- DynamoDB table `taxi_trip_details`
-- SQS queue `failed-updated-trips`
-- SNS topic `Invalid-taxi-trips`
-- IAM role and policies for the Lambdas :contentReference[oaicite:2]{index=2}  
+Repository Structure
 
----
+Future Enhancements
 
-## 3. Architecture Diagram
+⚡ Overview
 
-You can place this in `docs/architecture.md` and/or embed it in this README.  
-GitHub renders Mermaid diagrams natively:
+The system ingests streaming trip events, processes them in real time with AWS Lambda, persists trip state in DynamoDB, and recovers from write failures using an AWS Glue batch job.
 
-```mermaid
+The pipeline guarantees:
+
+Real-time processing of trip events
+
+Fault tolerance with full replay support
+
+Exactly-once–like outcomes for DynamoDB updates
+
+Eventual consistency even under write failures
+
+🏗️ High-Level Architecture
 flowchart LR
-    subgraph Source
-        A[SF Taxi Trips Dataset<br/>(DataSF)]
-        B[Sample Parquet Files<br/>start/end_taxi_trips]
+    subgraph Ingestion Layer
+        A1[Start-Trip\nProducers] --> KS1[Kinesis Stream\nstart-trip-stream]
+        A2[End-Trip\nProducers] --> KS2[Kinesis Stream\nend-trip-stream]
     end
 
-    B --> C[Producer Script<br/>taxi_trip_kinesis_streams.py]
-
-    subgraph Streaming
-        C --> D[(Kinesis<br/>start-trip-stream)]
-        C --> E[(Kinesis<br/>end-trip-stream)]
+    subgraph Processing Layer
+        KS1 --> L1[Lambda\nstart-taxi-trips]
+        KS2 --> L2[Lambda\nend-taxi-trips]
     end
 
-    subgraph Processing
-        D --> F[Lambda<br/>start-taxi-trips]
-        E --> G[Lambda<br/>end-taxi-trips]
+    subgraph Storage & State
+        DDB[(DynamoDB\n taxi_trip_details)]
     end
 
-    subgraph Storage
-        F --> H[(DynamoDB<br/>taxi_trip_details)]
-        G --> H
+    subgraph Error Handling
+        SNS[(SNS Topic\nInvalid-taxi-trips)]
+        SQS[(SQS Queue\nfailed-updated-trips)]
     end
 
-    F --> I[(SNS<br/>Invalid-taxi-trips)]
-    G --> J[(SQS<br/>failed-updated-trips)]
+    subgraph Recovery Layer
+        Glue[Glue Job\nReplay Failed Trips]
+    end
 
-    subgraph Replay
-        J --> K[AWS Glue Job<br/>process-failed-trips<br/>taxi_trip_glue_replay.py]
-        K --> H
+    %% start trip flow
+    L1 -->|Valid start event| DDB
+    L1 -->|Invalid event| SNS
 
+    %% end trip flow
+    L2 -->|Valid end event| DDB
+    L2 -->|DynamoDB Write Error| SQS
 
-taxi-trips-streaming-pipeline/
-├─ README.md                  # You are here
-├─ docs/
-│  ├─ architecture.md         # Architecture diagram & narrative
-│  └─ images/                 # (optional) exported diagrams
-├─ infra/
-│  └─ TaxiTripResourcesAWS-template.yaml  # CloudFormation stack
-├─ src/
-│  ├─ lambdas/
-│  │  ├─ start_taxi_trips_lambda.py      # Processes start-of-trip events
-│  │  └─ end_taxi_trips_lambda.py        # Processes end-of-trip events
-│  ├─ glue/
-│  │  └─ taxi_trip_glue_replay.py        # Glue job to replay failed updates
-│  └─ tools/
-│     └─ taxi_trip_kinesis_streams.py    # Local producer -> Kinesis
-├─ data/
-│  ├─ start_taxi_trips_sample.parquet
-│  └─ end_taxi_trips_sample.parquet
-└─ .gitignore
+    %% glue recovery flow
+    SQS -->|Batch Read| Glue -->|Replay Updates| DDB
+    Glue -->|Delete on Success| SQS
 
+🧩 Components
+1. Amazon Kinesis Streams
 
+Two independent streams:
+
+start-trip-stream
+
+end-trip-stream
+
+Provide scalable ingestion with ordered, real-time event delivery.
+
+2. AWS Lambda Functions
+
+start-taxi-trips
+
+Validates start-trip events
+
+Writes initial trip record to DynamoDB
+
+Sends invalid data alerts to SNS
+
+end-taxi-trips
+
+Validates end-trip events
+
+Writes completion data to DynamoDB
+
+On DynamoDB write failure → sends event to the SQS retry queue
+
+3. DynamoDB — taxi_trip_details
+
+Holds the authoritative trip record:
+
+trip_id (primary key)
+
+start/end timestamps
+
+locations
+
+fare
+
+trip status
+
+4. SQS — failed-updated-trips
+
+Buffer for events that Lambda could not write to DynamoDB.
+
+Glue consumes this queue during recovery.
+
+5. AWS Glue Replay Job
+
+A Python job that:
+
+Reads messages in batches
+
+Idempotently replays trip updates into DynamoDB
+
+Removes messages only after success
+
+Ensures durable recovery and no lost end-trip events.
+
+🧵 Sequence Diagrams
+1️⃣ Start-Trip Event Flow
+sequenceDiagram
+    autonumber
+
+    participant Producer as Trip Source
+    participant Kinesis as start-trip-stream
+    participant Lambda as start-taxi-trips Lambda
+    participant DDB as DynamoDB<br>taxi_trip_details
+    participant SNS as SNS Topic<br>Invalid-taxi-trips
+
+    Producer ->> Kinesis: PutRecord(start-trip event)
+    Kinesis ->> Lambda: Trigger event batch
+    Lambda ->> Lambda: Validate start-trip payload
+
+    alt Valid start-trip
+        Lambda ->> DDB: PutItem / UpdateItem<br>status="STARTED"
+    else Invalid event
+        Lambda ->> SNS: Publish notification
+    end
+
+2️⃣ End-Trip Event Flow
+sequenceDiagram
+    autonumber
+
+    participant Producer as Trip Source
+    participant Kinesis as end-trip-stream
+    participant Lambda as end-taxi-trips Lambda
+    participant DDB as DynamoDB<br>taxi_trip_details
+    participant SQS as SQS Queue<br>failed-updated-trips
+
+    Producer ->> Kinesis: PutRecord(end-trip event)
+    Kinesis ->> Lambda: Trigger event batch
+    Lambda ->> Lambda: Validate end-trip event
+
+    alt DynamoDB update succeeds
+        Lambda ->> DDB: UpdateItem<br>status="ENDED", fare, timestamps
+    else DynamoDB update fails
+        Lambda ->> SQS: SendMessage(original event)
+    end
+
+3️⃣ Glue Replay Recovery Flow
+sequenceDiagram
+    autonumber
+
+    participant Glue as Glue Job<br>replay_failed_trips()
+    participant SQS as SQS Queue<br>failed-updated-trips
+    participant DDB as DynamoDB<br>taxi_trip_details
+
+    loop Until SQS empty
+        Glue ->> SQS: ReceiveMessage(max 10)
+        SQS -->> Glue: Messages(batch)
+
+        alt No messages returned
+            Glue ->> Glue: Exit loop<br>(Queue empty)
+        end
+
+        loop For each message
+            Glue ->> Glue: Parse record JSON
+            Glue ->> DDB: UpdateItem<br>(idempotent update)
+
+            alt Update successful
+                Glue ->> SQS: DeleteMessage
+            else Update failed
+                Glue ->> Glue: Log failure<br>(message reappears later)
+            end
+        end
+    end
+
+🔁 Glue Replay Job
+
+The replay job (taxi_trip_glue_replay.py) performs:
+
+Precision-safe JSON parsing (Decimals for DynamoDB)
+
+Validation: ensures trip_id exists
+
+Safely constructs DynamoDB UpdateExpression
+
+Retries in batch until queue is empty
+
+Deletes messages only on success
+
+This ensures eventual consistency and zero data loss.
+
+🔄 Data Flow Summary
+Start-trip → Kinesis → Lambda → DynamoDB
+End-trip   → Kinesis → Lambda → DynamoDB (success)
+End-trip   → Kinesis → Lambda → SQS (on failure)
+SQS → Glue Replay → DynamoDB (retry)
+
+📁 Repository Structure
+.
+├── TaxiTripResourcesAWS-template.yaml     # Full AWS infrastructure stack
+├── taxi_trip_glue_replay.py               # Glue replay job (batch recovery)
+├── README.md                              # Project documentation
+└── diagrams/                              # Optional rendered PNG/SVG outputs
