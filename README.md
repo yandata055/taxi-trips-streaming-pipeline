@@ -1,52 +1,41 @@
 # 🚕 Taxi Trip Streaming Pipeline
 
-This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events. Build on **AWS**, it:
-
-- Processes start‑trip and end‑trip events using **Kinesis** and **Lambda**
-- Stores trip state in **DynamoDB**
-- Enables error handling and recovery through **SNS**, **SQS**, and **AWS Glue**
+This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events.  
+Built on **AWS**, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
 
 ---
 
-# 📚 Table of Contents
+# Table of Contents
 
-- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
 - [High-Level Architecture](#high-level-architecture)
 - [Components](#components)
+- [Data Flow Summary](#data-flow-summary)
 - [Sequence Diagrams](#sequence-diagrams)
   - [Start-Trip Event Flow](#1️⃣-start-trip-event-flow)
   - [End-Trip Event Flow](#2️⃣-end-trip-event-flow)
   - [Glue Replay Recovery Flow](#3️⃣-glue-replay-recovery-flow)
-- [Glue Replay Job](#glue-replay-job)
-- [Data Flow Summary](#data-flow-summary)
-- [Repository Structure](#repository-structure)
-- [Future Enhancements](#future-enhancements)
+
+
+# Features
+- Real‑time ingestion of taxi trip events  
+- Serverless processing with AWS Lambda  
+- Reliable state management in DynamoDB  
+- Robust error handling and recovery  
 
 ---
 
-# ⚡ Overview
-
-This project implements a **streaming taxi trip pipeline** designed for:
-
-- Real-time ingestion  
-- Scalable event processing  
-- Fault-tolerant updates  
-- Exactly-once–like behavior  
-
-The pipeline uses the following AWS components:
-
-- **Kinesis Streams** – start & end event ingestion  
-- **Lambda Functions** – real-time event processors  
-- **DynamoDB** – trip state database  
-- **SNS** – invalid data notifications  
-- **SQS** – buffering of failed updates  
-- **AWS Glue** – batch recovery of failed writes  
-
-Together, these components guarantee **eventual consistency** and **no lost events**.
+# Tech Stack
+- **AWS Kinesis** – event streaming  
+- **AWS Lambda** – serverless compute  
+- **Amazon DynamoDB** – state storage  
+- **Amazon SNS & SQS** – messaging and error handling  
+- **AWS Glue** – data recovery and ETL  
 
 ---
 
-# 🏗️ High-Level Architecture
+# High-Level Architecture
 
 ```mermaid
 flowchart LR
@@ -88,7 +77,7 @@ flowchart LR
 
 ---
 
-# 🧩 Components
+# Components
 
 ### **1. Amazon Kinesis Streams**
 Two dedicated streams:
@@ -115,14 +104,6 @@ These provide high-throughput ingestion and ordered delivery.
 
 ### **3. DynamoDB — `taxi_trip_details`**
 Stores the authoritative record of every trip:
-
-| Attribute | Purpose |
-|----------|----------|
-| `trip_id` | Primary key |
-| `start_time`, `end_time` | Timestamps |
-| `pickup/dropoff location` | Coordinates |
-| `fare` | Trip cost |
-| `status` | STARTED / COMPLETED |
 
 ---
 
@@ -151,7 +132,24 @@ A Python job performing:
 
 ---
 
-# 🧵 Sequence Diagrams
+# Data Flow Summary
+
+```
+Start-trip → Kinesis → Lambda → DynamoDB
+End-trip   → Kinesis → Lambda → DynamoDB (✓ success)
+End-trip   → Kinesis → Lambda → SQS (✗ failure)
+SQS → Glue Replay → DynamoDB (recovered)
+```
+
+This ensures:
+
+- No data loss  
+- Automatic recovery  
+- Reliable end-to-end consistency  
+
+---
+
+# Sequence Diagrams
 
 ---
 
@@ -235,65 +233,5 @@ sequenceDiagram
         end
     end
 ```
-
----
-
-# 🔁 Glue Replay Job
-
-The glue job (`taxi_trip_glue_replay.py`) implements:
-
-### ✔ Decimal-safe JSON parsing  
-DynamoDB requires numeric precision, so JSON numbers are parsed as `Decimal`.
-
-### ✔ Validation  
-Every replayed record must include `trip_id`.
-
-### ✔ Dynamic UpdateExpression generation  
-The job builds DynamoDB update expressions dynamically based on fields present.
-
-### ✔ Idempotent updates  
-If the same event is replayed multiple times, it simply overwrites the same trip record safely.
-
-### ✔ Safe delete-on-success behavior  
-Messages are removed from SQS *only after* DynamoDB write success.
-
----
-
-# 🔄 Data Flow Summary
-
-```
-Start-trip → Kinesis → Lambda → DynamoDB
-End-trip   → Kinesis → Lambda → DynamoDB (✓ success)
-End-trip   → Kinesis → Lambda → SQS (✗ failure)
-SQS → Glue Replay → DynamoDB (recovered)
-```
-
-This ensures:
-
-- No data loss  
-- Automatic recovery  
-- Reliable end-to-end consistency  
-
----
-
-# 📁 Repository Structure
-
-```
-.
-├── TaxiTripResourcesAWS-template.yaml     # CloudFormation IaC stack
-├── taxi_trip_glue_replay.py               # Glue job for batch recovery
-├── README.md                              # Documentation (this file)
-└── diagrams/                              # Optional: saved PNG/SVG diagrams
-```
-
----
-
-# 🚀 Future Enhancements
-
-- Add CI/CD pipeline (GitHub Actions, CodePipeline)  
-- Add unit tests for Lambda and Glue  
-- Add CloudWatch alarm dashboards  
-- Integrate DynamoDB Streams for real-time analytics  
-- Introduce schema registry for versioned trip events  
 
 ---
