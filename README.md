@@ -71,13 +71,11 @@ flowchart LR
 ---
 
 # Data Source
-This project uses sampled records from San Francisco’s official Taxi Trips open dataset, published through the city’s open data platform. The dataset is modeled as a continuous stream of start‑trip and end‑trip events to simulate real‑time taxi operations.
+This project uses sampled records from San Francisco taxi trip datasets, published through the city’s open data platform. The dataset is modeled as a continuous stream of start‑trip and end‑trip events to simulate real‑time taxi operations.
 
 ### Taxi Trip Event Attributes
 
-The following table summarizes the attributes captured in both **start‑trip** and **end‑trip** event records from the San Francisco Taxi Trips dataset.
-
-| **Start‑Trip Attribute**       | **Description (placeholder)**                  | **End‑Trip Attribute**       | **Description (placeholder)**                  |
+| **Start‑Trip Attribute**       | **Description**                  | **End‑Trip Attribute**       | **Description**                  |
 |--------------------------------|------------------------------------------------|------------------------------|------------------------------------------------|
 | `trip_id`                      | Unique identifier for the trip                 | `trip_id`                    | Unique identifier for the trip                 |
 | `start_time_local`             | Local timestamp when the trip started          | `end_time_local`             | Local timestamp when the trip ended            |
