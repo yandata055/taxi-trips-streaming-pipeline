@@ -91,7 +91,7 @@ Consume start-trip and end-trip events independently.
 - Updates DynamoDB with completion details  
 - On error → sends event to SQS (`failed-updated-trips`)
 
-### **3. Amazon DynamoDB — `taxi trip details`**
+### **3. Amazon DynamoDB — `taxi-trip-details`**
 Persist trip states and attributes (trip_id as PK).
 
 ### **4. AWS SQS — Failed Update Buffer**
