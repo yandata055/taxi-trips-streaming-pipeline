@@ -91,18 +91,18 @@ Consume start-trip and end-trip events independently.
 - Updates DynamoDB with completion details  
 - On error → sends event to SQS (`failed-updated-trips`)
 
-### **3. Amazon DynamoDB — `taxi-trip-details`**
+### **3. Amazon DynamoDB ** — `taxi-trip-details`
 Persist trip states and attributes (trip_id as PK).
 
-### **4. AWS SQS — Failed Update Buffer**
+### **4. Amazon SQS — Failed Update Buffer**
 `failed-updated-trips` queue stores events that the end-trip Lambda could not write to DynamoDB.
 
 This ensures no event is ever lost.
 
-### **5. AWS SNS — Invalid Data Notifications**
+### **5. Amazon SNS — Invalid Data Notifications**
 All malformed or inconsistent start-trip events are published to:
 ```
-SNS Topic: Invalid-taxi-trips
+SNS Topic: invalid-taxi-trips
 ```
 An email subscription receives alerts for inspection.
 
