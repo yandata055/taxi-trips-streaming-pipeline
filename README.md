@@ -1,13 +1,13 @@
-# 🚕 Taxi Trip Streaming Pipeline
+# 🚕 Taxi Trip Streaming Pipeline - AWS Architecture
 
-This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events. Built on **AWS**, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
+This project provides a **fault‑tolerant, real‑time streaming pipeline** for taxi trip events. Built on AWS, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
 
 ---
 
 # Table of Contents
 
-- [Tech Stack](#tech-stack)
-- [High-Level Architecture](#high-level-architecture)
+- [Tech Stack With AWS](#tech-stack-wiith-aws)
+- [Architecture Overview](#architecture-overview)
 - [Components](#components)
 - [Data Source](#data-source)
 - [Data Flow Summary](#data-flow-summary)
@@ -18,20 +18,20 @@ This project provides a **fault‑tolerant, real‑time streaming pipeline** for
 
 ---
 
-# Tech Stack
-- **AWS Kinesis** – real-time ingestion of taxi start/end events
-- **AWS Lambda** – serverless compute for validating and upserting trips  
-- **Amazon DynamoDB** – low-latency store for taxi trip details 
-- **Amazon SQS** – buffer for failed updates (replay queue) 
-- **AWS Glue** – batch replay of failed events from SQS 
-- **Amazon SNS** – notifications for invalid taxi trips 
-- **Amazon S3** – landing bucket for sample data & artifacts 
-- **AWS IAM** - resource access control 
-- **AWS CloudFormation** - keep the environment reproducible via IaC
+# Tech Stack With AWS
+- **Kinesis** – real-time ingestion of taxi start/end events
+- **Lambda** – serverless compute for validating and upserting trips  
+- **DynamoDB** – low-latency store for taxi trip details 
+- **SQS** – buffer for failed updates (replay queue) 
+- **SNS** – notifications for invalid taxi trips 
+- **Glue** – batch replay of failed events from SQS 
+- **S3** – landing bucket for sample data & artifacts 
+- **IAM** - resource access control 
+- **CloudFormation** - keep the environment reproducible via IaC
 
 ---
 
-# High-Level Architecture
+# Architecture Overview
 
 ```mermaid
 flowchart LR
@@ -70,11 +70,6 @@ flowchart LR
 
 ---
 
-# Data Source
-This project uses sampled records from San Francisco taxi trip datasets, published through the city’s open data platform. The dataset is modeled as a continuous stream of start‑trip and end‑trip events to simulate real‑time taxi operations. [Here presents taxi trip event attributes](data/taxi-trip-event-attributes.md).
-
----
-
 # Components
 
 ### **1. Amazon Kinesis Streams**
@@ -96,10 +91,10 @@ Consume start-trip and end-trip events independently.
 - Updates DynamoDB with completion details  
 - On error → sends event to SQS (`failed-updated-trips`)
 
-### **3. DynamoDB — `taxi_trip_details`**
+### **3. Amazon DynamoDB — `taxi trip details`**
 Persist trip states and attributes (trip_id as PK).
 
-### **4. SQS — Failed Update Buffer**
+### **4. AWS SQS — Failed Update Buffer**
 `failed-updated-trips` queue stores events that the end-trip Lambda could not write to DynamoDB.
 
 This ensures no event is ever lost.
@@ -111,10 +106,15 @@ SNS Topic: Invalid-taxi-trips
 ```
 An email subscription receives alerts for inspection.
 
-### **6. AWS Glue Replay Job**
+### **6. AWS Glue Job**
 A Python job performing:
 
 Batch-process SQS failures, reapply DynamoDB updates, delete SQS messages only after successful replay.
+
+---
+
+# Data Source
+This project uses data sampled from San Francisco taxi trip datasets, published through the city’s open data platform. The dataset is modeled as a continuous stream of start‑trip and end‑trip events to simulate real‑time taxi operations. [Here describes attributes of taxi trip events](data/taxi-trip-event-attributes.md).
 
 ---
 
