@@ -1,2 +1,4 @@
-.notebook/
-.cursorrules
+/.notebook/
+/.cursor/
+/.cursorignore
+/docs/
