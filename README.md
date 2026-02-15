@@ -1,6 +1,6 @@
 # 🚕 Taxi Trip Streaming Pipeline - AWS Architecture
 
-This project provides a **fault‑tolerant streaming pipeline** for taxi trip events. (modify there to discribe the major goal of this project) Built on AWS, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
+This project provides a **fault‑tolerant, real-time streaming pipeline** for taxi trip events. (modify there to discribe the major goal of this project) Built on AWS, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
 
 ---
 
@@ -9,7 +9,7 @@ This project provides a **fault‑tolerant streaming pipeline** for taxi trip ev
 - [Tech Stack With AWS](#tech-stack-wiith-aws)
 - [Architecture Overview](#architecture-overview)
 - [Components](#components)
-- [Data](#data)
+- [Data Source](#data-source)
 - [Data Flow Summary](#data-flow-summary)
 - [Sequence Diagrams](#sequence-diagrams)
   - [Start-Trip Event Flow](#1️⃣-start-trip-event-flow)
@@ -22,10 +22,9 @@ This project provides a **fault‑tolerant streaming pipeline** for taxi trip ev
 - **Kinesis** – real-time ingestion of taxi start/end events
 - **Lambda** – serverless compute for validating and upserting trips  
 - **DynamoDB** – low-latency store for taxi trip details 
-- **SQS** – buffer for failed updates (replay queue) 
 - **SNS** – notifications for invalid taxi trips 
+- **SQS** – buffer for failed updates (replay queue) 
 - **Glue** – batch replay of failed events from SQS 
-- **S3** – landing bucket for sample data & artifacts 
 - **IAM** - resource permission control 
 - **CloudFormation** - keep the environment reproducible via IaC
 
@@ -92,7 +91,7 @@ Consume start-trip and end-trip events independently.
 - On error → sends event to SQS (`failed-updated-trips`)
 
 ### **3. Amazon DynamoDB**
-Persist trip states and attributes in the table `taxi_trip_details` (trip_id as PK), enabling rapidly writes and reads for real-time trip updates.
+Persist trip states and attributes in the table `taxi_trip_details` (trip_id as PK), providing low-latency reads and writes for real-time trip updates.
 
 ### **4. Amazon SQS**
 The `failed-updated-trips` queue stores events that the end-trip Lambda could not write to DynamoDB.
@@ -107,9 +106,11 @@ An email subscription receives alerts for inspection.
 ### **6. AWS Glue Job**
 A Python job that batch-processes SQS failures, reapplies DynamoDB updates, and deletes SQS messages only after a successful replay.
 
+This is used to test the connection.
+
 ---
 
-# Data 
+# Data Source
 
 San Francisco’s open taxi trip dataset is used as the project’s data source,  modeled as a continuous stream of start‑trip and end‑trip events to simulate real‑time taxi operations. [Here describes attributes of taxi trip events](data/taxi-trip-event-attributes.md).
 
