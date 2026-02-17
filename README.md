@@ -106,7 +106,7 @@ An email subscription receives alerts for inspection.
 ### **6. AWS Glue Job**
 A Python job that batch-processes SQS failures, reapplies DynamoDB updates, and deletes SQS messages only after a successful replay.
 
-This is used to test the connection.
+Test this connection.
 
 ---
 
