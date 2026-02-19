@@ -1,8 +1,10 @@
-# 🚕 Taxi Trip Streaming Pipeline - AWS Architecture
+# 🚕 Taxi Trips Streaming - AWS Architecture
 
 This project provides a **fault‑tolerant, real-time streaming pipeline** for taxi trip events. (modify there to discribe the major goal of this project) Built on AWS, it uses Kinesis + Lambda for event processing, DynamoDB for state storage, and SNS/SQS/Glue for error handling and recovery.
 
 ---
+
+See [ROADMAP](ROADMAP.md) for upcoming improvements.
 
 # Table of Contents
 
